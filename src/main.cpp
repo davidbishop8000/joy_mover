@@ -40,12 +40,6 @@ void getValue()
     pos_Y = 0;
   pos_X = analogRead(pin_X);
   //Serial.println(String(analogRead(pin_Y)) + " | " + String(analogRead(pin_X)));
-  /*if ((pos_X < AxeXZero - k) || (pos_X > AxeXZero + k))
-  {
-    speed_left = pos_Y + (pos_X - AxeXZero);
-    speed_right = pos_Y - (pos_X - AxeXZero);
-  }
-  */
   if ((pos_X < AxeXZero - k) || (pos_X > AxeXZero + k))
   {
     if (pos_Y >= 0)
@@ -59,33 +53,6 @@ void getValue()
       speed_right = pos_Y + (pos_X - AxeXZero);
     }
   }
-
-  /*if ((pos_X > (AxeXZero + k)) || (pos_X > (AxeXZero + k)))
-  {
-    if (pos_Y > (AxeYZero + k))
-    {
-      speed_left = pos_Y + (pos_X - AxeXZero);
-      speed_right = pos_Y - (pos_X - AxeXZero);
-    }
-    else
-    {
-      speed_left = pos_Y - (pos_X - AxeXZero);
-      speed_right = pos_Y + (pos_X - AxeXZero);
-    }
-  }
-  else if (pos_X < (AxeXZero - k))
-  {
-    if (pos_Y < (AxeYZero + k))
-    {
-      speed_left = pos_Y - (pos_X - AxeXZero);
-      speed_right = pos_Y + (pos_X - AxeXZero);
-    }
-    else
-    {
-      speed_left = pos_Y + (pos_X - AxeXZero);
-      speed_right = pos_Y - (pos_X - AxeXZero);
-    }
-  }*/
   else
   {
     speed_left = pos_Y;
@@ -112,26 +79,24 @@ void getValue()
 void send_data()
 {
   DataSend[0] = 69; //E
-  DataSend[1] = 53; //5
-  DataSend[2] = 68; //D
-  DataSend[3] = 84; //T
+  DataSend[1] = 84; //T
   uint8_t rever[4];
   int32_t *p_val = (int32_t *)&rever[0];
   *p_val = *(&speed_left);
   uint8_t i;
   for (i = 0; i < 4; i++)
   {
-    DataSend[i + 4] = rever[3 - i];
+    DataSend[i + 2] = rever[3 - i];
   }
   *p_val = *(&speed_right);
   for (i = 0; i < 4; i++)
   {
-    DataSend[i + 8] = rever[3 - i];
+    DataSend[i + 6] = rever[3 - i];
   }
   if (speed_left != 0 || speed_right != 0)
   {
     zero_count = 0;
-    Serial.write(DataSend, 12);
+    Serial.write(DataSend, 10);
     //delay(100);
   }
   else if (zero_count < 5)
@@ -161,26 +126,21 @@ void get_button()
   if (!stop_btn_press && stop_btn_trig == 0)
   {
     digitalWrite(ledpin, 1);
-    Serial.print("E5dStop_====");
+    Serial.print("ETStop_===");
     delay(300);
     stop_btn_press = digitalRead(stop_btn);
     if (!stop_btn_press)
     {
-      Serial.print("E5dStop_====");
+      Serial.print("ETStop_===");
       delay(1600);
       stop_btn_press = digitalRead(stop_btn);
       if (!stop_btn_press)
       {
-        Serial.print("E5dReset====");
+        Serial.print("ETReset===");
         digitalWrite(ledpin, 0);
         stop_btn_trig = 1;
         delay(300);
       }
-      /*while (!stop_btn_press)
-      {
-        stop_btn_press = digitalRead(stop_btn);
-        delay(50);
-      }*/
     }
   }
   else if (stop_btn_press) stop_btn_trig = 0;
@@ -200,11 +160,6 @@ void get_button()
         ultrasonic_btn_trig = 1;
         delay(300);
       }
-      /*while (!ultrasonic_btn_press)
-      {
-        ultrasonic_btn_press = digitalRead(ultrasonic_btn);
-        delay(50);
-      }*/
     }
   }
   else if (ultrasonic_btn_press) ultrasonic_btn_trig = 0;
@@ -219,11 +174,6 @@ void get_button()
       else Serial.print("E5dCnOf_====");
       center_btn_trig = 1;
       delay(50);
-      /*while (!center_btn_press)
-      {
-        center_btn_press = digitalRead(center_btn);
-        delay(50);
-      }*/
     }
   }
   else if (center_btn_press) center_btn_trig = 0;
