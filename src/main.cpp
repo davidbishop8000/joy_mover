@@ -101,8 +101,8 @@ void getValue()
 void send_data()
 {
   RC_Command.start  = (uint16_t)RC_START_FRAME;
-  RC_Command.speedR  = (int16_t)speed_left;
-  RC_Command.speedL  = (int16_t)speed_right;
+  RC_Command.speedL  = (int16_t)(-1 * speed_left);
+  RC_Command.speedR  = (int16_t)(-1 * speed_right);
   RC_Command.cmd0  = (uint16_t)blade_st;
   RC_Command.cmd1  = (uint16_t)0x0000;
   RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.speedR ^ RC_Command.speedL ^ RC_Command.cmd0 ^ RC_Command.cmd1);
@@ -120,8 +120,8 @@ void send_data()
 void send_button()
 {
   RC_Command.start  = (uint16_t)RC_START_FRAME;
-  RC_Command.speedR  = (int16_t)speed_left;
-  RC_Command.speedL  = (int16_t)speed_right;
+  RC_Command.speedL  = (int16_t)(-1 * speed_left);
+  RC_Command.speedR  = (int16_t)(-1 * speed_right);
   RC_Command.cmd0  = (uint16_t)blade_st;
   RC_Command.cmd1  = (uint16_t)0x0000;
   RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.cmd0 ^ RC_Command.cmd1 ^ RC_Command.speedR ^ RC_Command.speedL);
