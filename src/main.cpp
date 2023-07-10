@@ -9,7 +9,7 @@
 #define BTN_A 8
 #define BTN_X 9
 
-#define TIME_SEND       50 
+#define TIME_SEND       100 
 
 #define AxeXZero 508
 #define AxeYZero 558
@@ -31,7 +31,7 @@
 #define RC_START_FRAME      0xACBD
 
 #define BLADE_ON            0x0101
-#define BLADE_OFF           0x0000
+#define BLADE_OFF           0x0202
 
 int16_t speed_left, speed_right;
 int32_t pos_Y, pos_X;
@@ -101,9 +101,9 @@ void send_data()
   RC_Command.start  = (uint16_t)RC_START_FRAME;
   RC_Command.speedL  = -(int16_t)speed_left;
   RC_Command.speedR  = -(int16_t)speed_right;
-  RC_Command.cmd0  = blade_st;
-  RC_Command.cmd1  = 0;
-  RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.cmd0 ^ RC_Command.cmd1 ^ RC_Command.speedR ^ RC_Command.speedL);
+  RC_Command.cmd0  = (uint16_t)blade_st;
+  RC_Command.cmd1  = (uint16_t)0x0000;
+  RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.speedR ^ RC_Command.speedL ^ RC_Command.cmd0 ^ RC_Command.cmd1);
   if (speed_left != 0 || speed_right != 0)
   {
     zero_count = 0;
@@ -120,8 +120,8 @@ void send_button()
   RC_Command.start  = (uint16_t)RC_START_FRAME;
   RC_Command.speedL  = (int16_t)speed_left;
   RC_Command.speedR  = (int16_t)speed_right;
-  RC_Command.cmd0  = blade_st;
-  RC_Command.cmd1  = 0;
+  RC_Command.cmd0  = (uint16_t)blade_st;
+  RC_Command.cmd1  = (uint16_t)0x0000;
   RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.cmd0 ^ RC_Command.cmd1 ^ RC_Command.speedR ^ RC_Command.speedL);
   Serial.write((uint8_t *) &RC_Command, sizeof(RC_Command));
 }
