@@ -1,21 +1,24 @@
 #include <Arduino.h>
+#include <Button.h>
 //Shift+Alt+F format
 #define pin_X A0
 #define pin_Y A1
-#define center_btn 11 //center
-#define ultrasonic_btn 12 //r2
-#define stop_btn 10 //r
-#define light_f 4
-#define light_b 5
-#define ledpin 13
+#define BTN_BLD_ON 12
+#define BTN_BLD_OFF 10
+
+#define BTN_A 8
+#define BTN_X 9
+
+#define TIME_SEND       50 
+
 #define AxeXZero 508
 #define AxeYZero 558
 #define k 20 //4
 #define diff 70 //20
 #define max_val 390 //512
 #define min_val -390 //512
-#define max_speed 2900
-#define min_speed -2900
+#define max_speed 250
+#define min_speed -250
 
 //       Y
 //      900
@@ -25,14 +28,31 @@
 //      100
 
 
-uint8_t DataSend[20] = {
-    0,
-};
-int32_t speed_left, speed_right;
+#define RC_START_FRAME      0xACBD
+
+#define BLADE_ON            0x0101
+#define BLADE_OFF           0x0000
+
+int16_t speed_left, speed_right;
 int32_t pos_Y, pos_X;
 uint8_t zero_count = 0;
-uint8_t forw_led_sv = 0;
-uint8_t back_led_sv = 0;
+int16_t blade_st;
+
+typedef struct{
+   uint16_t start;
+   int16_t  speedR;
+   int16_t  speedL;
+   uint16_t  cmd0;
+   uint16_t  cmd1;
+   uint16_t checksum;
+} RCSerialControl;
+RCSerialControl RC_Command;
+
+Button btn_blade_on(BTN_BLD_ON);
+Button btn_blade_off(BTN_BLD_OFF);
+Button btn_a(BTN_A);
+Button btn_x(BTN_X);
+
 void getValue()
 {
   pos_Y = (analogRead(pin_Y) - AxeYZero);
@@ -78,157 +98,69 @@ void getValue()
 }
 void send_data()
 {
-  DataSend[0] = 69; //E
-  DataSend[1] = 84; //T
-  uint8_t rever[4];
-  int32_t *p_val = (int32_t *)&rever[0];
-  *p_val = *(&speed_left);
-  uint8_t i;
-  for (i = 0; i < 4; i++)
-  {
-    DataSend[i + 2] = rever[3 - i];
-  }
-  *p_val = *(&speed_right);
-  for (i = 0; i < 4; i++)
-  {
-    DataSend[i + 6] = rever[3 - i];
-  }
+  RC_Command.start  = (uint16_t)RC_START_FRAME;
+  RC_Command.speedL  = -(int16_t)speed_left;
+  RC_Command.speedR  = -(int16_t)speed_right;
+  RC_Command.cmd0  = blade_st;
+  RC_Command.cmd1  = 0;
+  RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.cmd0 ^ RC_Command.cmd1 ^ RC_Command.speedR ^ RC_Command.speedL);
   if (speed_left != 0 || speed_right != 0)
   {
     zero_count = 0;
-    Serial.write(DataSend, 10);
-    //delay(100);
+    Serial.write((uint8_t *) &RC_Command, sizeof(RC_Command));
   }
-  else if (zero_count < 5)
+  else if (zero_count < 3)
   {
     zero_count++;
-    Serial.write(DataSend, 12);
+    Serial.write((uint8_t *) &RC_Command, sizeof(RC_Command));
   }
-  delay(30);
+}
+void send_button()
+{
+  RC_Command.start  = (uint16_t)RC_START_FRAME;
+  RC_Command.speedL  = (int16_t)speed_left;
+  RC_Command.speedR  = (int16_t)speed_right;
+  RC_Command.cmd0  = blade_st;
+  RC_Command.cmd1  = 0;
+  RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.cmd0 ^ RC_Command.cmd1 ^ RC_Command.speedR ^ RC_Command.speedL);
+  Serial.write((uint8_t *) &RC_Command, sizeof(RC_Command));
 }
 void get_button()
 {
-  static uint8_t stop_btn_press = 0;
-  static uint8_t ultrasonic_btn_press = 0;
-  static uint8_t center_btn_press = 0;
-  static uint8_t light_f_press = 0;
-  static uint8_t light_b_press = 0;
-  stop_btn_press = digitalRead(stop_btn);
-  ultrasonic_btn_press = digitalRead(ultrasonic_btn);
-  center_btn_press = digitalRead(center_btn);
-  light_f_press = digitalRead(light_f);
-  light_b_press = digitalRead(light_b);
-  static uint8_t stop_btn_trig = 0;
-  static uint8_t ultrasonic_btn_trig = 0;
-  static uint8_t center_btn_trig = 0;
-  static uint8_t light_f_trig = 0;
-  static uint8_t light_b_trig = 0;
-  if (!stop_btn_press && stop_btn_trig == 0)
+  if (btn_blade_on.pressed())
   {
-    digitalWrite(ledpin, 1);
-    Serial.print("ETStop_===");
-    delay(300);
-    stop_btn_press = digitalRead(stop_btn);
-    if (!stop_btn_press)
-    {
-      Serial.print("ETStop_===");
-      delay(1600);
-      stop_btn_press = digitalRead(stop_btn);
-      if (!stop_btn_press)
-      {
-        Serial.print("ETReset===");
-        digitalWrite(ledpin, 0);
-        stop_btn_trig = 1;
-        delay(300);
-      }
-    }
+		blade_st = (uint16_t)BLADE_ON;
+    send_button();
   }
-  else if (stop_btn_press) stop_btn_trig = 0;
-  digitalWrite(ledpin, 0);
-  if (!ultrasonic_btn_press && ultrasonic_btn_trig == 0)
+	if (btn_blade_off.pressed())
   {
-    delay(30);
-    ultrasonic_btn_press = digitalRead(ultrasonic_btn);
-    if (!ultrasonic_btn_press)
-    {
-      Serial.print("E5dUltOf====");
-      delay(2000);
-      ultrasonic_btn_press = digitalRead(ultrasonic_btn);
-      if (!ultrasonic_btn_press)
-      {
-        Serial.print("E5dUltOn===="); //disable ultrasonic
-        ultrasonic_btn_trig = 1;
-        delay(300);
-      }
-    }
+		blade_st = (uint16_t)BLADE_OFF;
+    send_button();
   }
-  else if (ultrasonic_btn_press) ultrasonic_btn_trig = 0;
-  if (!center_btn_press && center_btn_trig == 0)
-  {
-    delay(250);
-    center_btn_press = digitalRead(center_btn);
-    if (!center_btn_press)
-    {
-      forw_led_sv = !forw_led_sv;
-      if (forw_led_sv) Serial.print("E5dCnOn_====");
-      else Serial.print("E5dCnOf_====");
-      center_btn_trig = 1;
-      delay(50);
-    }
-  }
-  else if (center_btn_press) center_btn_trig = 0;
-  
-  if (!light_f_press && light_f_trig == 0)
-  {
-    delay(250);
-    light_f_press = digitalRead(light_f);
-    if (!light_f_press)
-    {
-      forw_led_sv = !forw_led_sv;
-      if (forw_led_sv) Serial.print("E5dFlOn_====");
-      else Serial.print("E5dFlOf_====");
-      light_f_trig = 1;
-      delay(50);
-    }
-  }
-  else if (light_f_press) light_f_trig = 0;
-
-  if (!light_b_press && light_b_trig == 0)
-  {
-    delay(250);
-    light_b_press = digitalRead(light_b);
-    if (!light_b_press)
-    {
-      back_led_sv = !back_led_sv;
-      if (back_led_sv) Serial.print("E5dBlOn_====");
-      else Serial.print("E5dBlOf_====");
-      light_b_trig = 1;
-      delay(50);
-    }
-  }
-  else if (light_b_press) light_b_trig = 0;
 }
 
 void setup()
 {
   Serial.begin(19200);
-  pinMode(ledpin, OUTPUT);
   pinMode(pin_X, INPUT);
   pinMode(pin_Y, INPUT);
-  pinMode(stop_btn, INPUT);
-  pinMode(ultrasonic_btn, INPUT);
-  pinMode(center_btn, INPUT);
-  pinMode(light_f, INPUT);
-  pinMode(light_b, INPUT);
-  pinMode(stop_btn, INPUT_PULLUP);  
-  pinMode(ultrasonic_btn, INPUT_PULLUP);
-  pinMode(center_btn, INPUT_PULLUP);
+  btn_blade_on.begin();
+  btn_blade_off.begin();
+  btn_a.begin();
+  btn_x.begin();
 }
+
+unsigned long iTimeSend = 0;
 
 void loop()
 {
+  unsigned long timeNow = millis();
   get_button();
-  getValue();
-  send_data();
-  //Serial.println(String(speed_left) + " | " + String(speed_right));
+  if (iTimeSend < timeNow)
+  {
+    getValue();
+    send_data();
+    iTimeSend = timeNow + TIME_SEND;
+    //Serial.println(String(speed_left) + " | " + String(speed_right));
+  }  
 }
