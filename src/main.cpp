@@ -11,12 +11,12 @@
 
 #define TIME_SEND       100 
 
-#define AxeXZero 508
-#define AxeYZero 558
-#define k 20 //4
-#define diff 70 //20
-#define max_val 390 //512
-#define min_val -390 //512
+#define AxeXZero 517
+#define AxeYZero 517
+#define k 10 //4
+#define diff 40 //20
+#define max_val 512 //512
+#define min_val -512 //512
 #define max_speed 250
 #define min_speed -250
 
@@ -32,8 +32,10 @@
 
 #define BLADE_ON            0x0101
 #define BLADE_OFF           0x0202
+#define SPEED_LOW           0x0303
+#define SPEED_FAST          0x0404
 
-int16_t speed_left, speed_right;
+int32_t speed_left, speed_right;
 int32_t pos_Y, pos_X;
 uint8_t zero_count = 0;
 int16_t blade_st;
@@ -99,8 +101,8 @@ void getValue()
 void send_data()
 {
   RC_Command.start  = (uint16_t)RC_START_FRAME;
-  RC_Command.speedL  = -(int16_t)speed_left;
-  RC_Command.speedR  = -(int16_t)speed_right;
+  RC_Command.speedR  = (int16_t)speed_left;
+  RC_Command.speedL  = (int16_t)speed_right;
   RC_Command.cmd0  = (uint16_t)blade_st;
   RC_Command.cmd1  = (uint16_t)0x0000;
   RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.speedR ^ RC_Command.speedL ^ RC_Command.cmd0 ^ RC_Command.cmd1);
@@ -118,8 +120,8 @@ void send_data()
 void send_button()
 {
   RC_Command.start  = (uint16_t)RC_START_FRAME;
-  RC_Command.speedL  = (int16_t)speed_left;
-  RC_Command.speedR  = (int16_t)speed_right;
+  RC_Command.speedR  = (int16_t)speed_left;
+  RC_Command.speedL  = (int16_t)speed_right;
   RC_Command.cmd0  = (uint16_t)blade_st;
   RC_Command.cmd1  = (uint16_t)0x0000;
   RC_Command.checksum = (uint16_t)(RC_Command.start ^ RC_Command.cmd0 ^ RC_Command.cmd1 ^ RC_Command.speedR ^ RC_Command.speedL);
@@ -135,6 +137,16 @@ void get_button()
 	if (btn_blade_off.pressed())
   {
 		blade_st = (uint16_t)BLADE_OFF;
+    send_button();
+  }
+  if (btn_a.pressed())
+  {
+		blade_st = (uint16_t)SPEED_FAST;
+    send_button();
+  }
+  if (btn_x.pressed())
+  {
+		blade_st = (uint16_t)SPEED_LOW;
     send_button();
   }
 }
